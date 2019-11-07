@@ -1,0 +1,3 @@
+[submodule "alphago_zero_sim"]
+	path = alphago_zero_sim
+	url = https://github.com/lovishmadaan/alphago_zero_sim
