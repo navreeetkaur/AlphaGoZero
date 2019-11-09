@@ -60,11 +60,7 @@ class GoState(object):
         '''
         assert color in [pachi_py.BLACK, pachi_py.WHITE], 'Invalid player color'
         self.board, self.color = board, color
-<<<<<<< HEAD
         # print(self.board.encode().shape)
-=======
-        print(self.board.encode().shape)
->>>>>>> fe170cc3d45ff7dc266c9dacb5186c0bf5ace4ed
         # print("------------$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
 
         # print(self.board.__repr__().decode())
@@ -208,13 +204,8 @@ class GoEnv(gym.Env):
         # Let the opponent play if it's not the agent's turn
 
         opponent_resigned = False
-<<<<<<< HEAD
         # print(self.state.color)
         # print(self.player_color)
-=======
-        print(self.state.color)
-        print(self.player_color)
->>>>>>> fe170cc3d45ff7dc266c9dacb5186c0bf5ace4ed
         
         if self.state.color != self.player_color:
             self.state, opponent_resigned, _ = self.exec_opponent_play(self.state, None, None)

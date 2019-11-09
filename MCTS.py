@@ -21,20 +21,14 @@ class MCTS():
         self.valid_moves = {}
         self.num_simulations = NUM_SIMULATIONS
         self.simulator = simulator
-<<<<<<< HEAD
         # print(simulator.player_color)
         # print(simulator.state.color)
-=======
-        print(simulator.player_color)
-        print(simulator.state.color)
->>>>>>> fe170cc3d45ff7dc266c9dacb5186c0bf5ace4ed
         self.currSimulator = None
 
     # run MCTS with player 1 (BLACK)
     # invert it when the player is WHITE
     def getPolicy(self, state, temp=1):
         # from IPython import embed; embed()
-<<<<<<< HEAD
         # print(state[16 ,0, 0])
         if(state[16,0,0] == Colour.WHITE.value):
             state[16, :, :] = Colour.BLACK.value
@@ -42,10 +36,6 @@ class MCTS():
             
             # print('------------------NEW SIMULATION-------------------')
             # print(state[16 ,0, 0])
-=======
-        for i in range(self.num_simulations):
-            print('------------------NEW SIMULATION-------------------')
->>>>>>> fe170cc3d45ff7dc266c9dacb5186c0bf5ace4ed
             self.search(deepcopy(state), 0)
         curObs = stateToObs(state)
         strObs = obsToString(curObs)
@@ -76,21 +66,12 @@ class MCTS():
     def getNextState(self, action):
         if(self.currSimulator) is None:
             self.currSimulator = copy(self.simulator)
-<<<<<<< HEAD
         # print("-------------------getNextState-----------------")
         # print('Initial -> Action: {}, Player: {}, State: {}'.format(
         #     action,
         #     Colour(self.currSimulator.player_color).__str__(),
         #     Colour(self.currSimulator.state.color).__str__()
         #     ))
-=======
-        print("-------------------getNextState-----------------")
-        print('Initial -> Action: {}, Player: {}, State: {}'.format(
-            action,
-            Colour(self.currSimulator.player_color).__str__(),
-            Colour(self.currSimulator.state.color).__str__()
-            ))
->>>>>>> fe170cc3d45ff7dc266c9dacb5186c0bf5ace4ed
 
         obs_t = None
         r_t = None
@@ -100,7 +81,6 @@ class MCTS():
             self.currSimulator.player_color = Colour.BLACK.value
             obs_t, action, r_t, done, info, cur_score = self.currSimulator.step(action)
             self.currSimulator.state.color = Colour.BLACK.value
-<<<<<<< HEAD
             # print(r_t, done)
             # print('Observation Inverted.') # Invert when the state of the simulator is WHITE
             obs_t = invertObs(obs_t)
@@ -115,32 +95,14 @@ class MCTS():
         #     Colour(self.currSimulator.state.color).__str__()
         # ))
         # print(obsToString(obs_t), r_t)
-=======
-            print('Observation Inverted.') # Invert when the state of the simulator is WHITE
-            obs_t = invertObs(obs_t)
-        else:
-            print('Observation Not Inverted.')
-            obs_t, action, r_t, done, info, cur_score = self.currSimulator.step(action)
-            self.currSimulator.state.color = Colour.WHITE.value
-            self.currSimulator.player_color = Colour.WHITE.value
-        print('Final -> Player: {}, State: {}'.format(
-            Colour(self.currSimulator.player_color).__str__(),
-            Colour(self.currSimulator.state.color).__str__()
-        ))
-        print(obsToString(obs_t), r_t)
->>>>>>> fe170cc3d45ff7dc266c9dacb5186c0bf5ace4ed
         return obs_t, r_t
 
     # State is of shape (17 x 13 x 13) -- STATE WITH RESPECT TO BLACK
     def search(self, state, reward):
-<<<<<<< HEAD
         # print(state[16, 0, 0])
         # print(Colour.BLACK.value)
 
         assert(state[16, 0, 0] == Colour.BLACK.value)
-=======
-        assert(state[16, 0, 0] + 1== Colour.BLACK.value)
->>>>>>> fe170cc3d45ff7dc266c9dacb5186c0bf5ace4ed
         player_colour = Colour.BLACK.value
 
         # Get Obs from State (Picked Top 2)
@@ -169,14 +131,11 @@ class MCTS():
         if strState not in self.Psa:
             start_t = time.time()
             ps, vs = self.nNet.predict(state)
-<<<<<<< HEAD
             end_t = time.time()
             print('Time elapsed for prediction = {}'.format(
                         end_t - start_t
                     ))            
 
-=======
->>>>>>> fe170cc3d45ff7dc266c9dacb5186c0bf5ace4ed
             valids = self.getValidMoves(obs, player_colour)
             ps = ps * valids
             self.Psa[strState] = ps
@@ -213,19 +172,12 @@ class MCTS():
                     best_act = a
 
         a = best_act
-<<<<<<< HEAD
         # if(a == PASS_ACTION):
         #     passes += 1
         next_obs, next_reward = self.getNextState(a)
 
         # Invert Obs to get Observation with respect to Black
         # print(player_colour)
-=======
-        next_obs, next_reward = self.getNextState(a)
-
-        # Invert Obs to get Observation with respect to Black
-        print(player_colour)
->>>>>>> fe170cc3d45ff7dc266c9dacb5186c0bf5ace4ed
         next_state = obsToState(next_obs, state) # Color is Black
 
         v = self.search(next_state, next_reward)

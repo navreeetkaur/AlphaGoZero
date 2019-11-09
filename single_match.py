@@ -41,7 +41,6 @@ class SingleMatch():
                 player = self.p1
             else:
                 player = self.p2
-<<<<<<< HEAD
             # print("!!!!!!!!!!!!")
             # print(self.env.state.color)
             # print(self.env.player_color)
@@ -49,25 +48,12 @@ class SingleMatch():
             # print(self.env.state.color)
             # print(self.env.player_color)
             # print("!!!!!!!!!!!!")
-=======
-            print("!!!!!!!!!!!!")
-            print(self.env.state.color)
-            print(self.env.player_color)
-            self.env.set_player_color(player_color)
-            print(self.env.state.color)
-            print(self.env.player_color)
-            print("!!!!!!!!!!!!")
->>>>>>> fe170cc3d45ff7dc266c9dacb5186c0bf5ace4ed
 
             # Get Player action
             # Todo Check for out of memory and other errors
             try:
                 a_t = self.get_action(player)
-<<<<<<< HEAD
                 # print(self.env.state.color)
-=======
-                print(self.env.state.color)
->>>>>>> fe170cc3d45ff7dc266c9dacb5186c0bf5ace4ed
 
             except TimedOutExc as e:
                 print("took too long")
@@ -77,13 +63,8 @@ class SingleMatch():
             # print(self.env.state.color)
             # print(self.env.player_color)
             self.obs_t, a_t, r_t, done, info, cur_score = self.env.step(a_t)
-<<<<<<< HEAD
             # print(self.env.state.color)
             # print("yyyyyyyyyyyyyy$$$$$$$$$$$$$$")
-=======
-            print(self.env.state.color)
-            print("yyyyyyyyyyyyyy$$$$$$$$$$$$$$")
->>>>>>> fe170cc3d45ff7dc266c9dacb5186c0bf5ace4ed
             self.env.render()
             self.opponent_action = a_t
             history.append(str(player_color) + ': ' + str(a_t))

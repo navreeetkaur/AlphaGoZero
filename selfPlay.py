@@ -29,12 +29,8 @@ class SelfPlay():
     def runEpisode(self):
         self.simulator.reset()
         # print(self.simulator.state.color)
-<<<<<<< HEAD
         # print("Ff~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
         # sim_copy = 
-=======
-        self.mcts = MCTS(self.network, self.simulator)
->>>>>>> fe170cc3d45ff7dc266c9dacb5186c0bf5ace4ed
 
         # print(self.simulator.state.color)
         
@@ -52,7 +48,6 @@ class SelfPlay():
         while(True):
             states.append(currState)
             players.append(self.currPlayer)
-<<<<<<< HEAD
             # print(self.simulator.state.color, self.simulator.player_color)
             start_t = time.time()
             policy = self.mcts.getPolicy(deepcopy(currState))
@@ -63,11 +58,6 @@ class SelfPlay():
                     ))            
 
             # print("Time elapsed for MCTS policy with")
-=======
-            policy = self.mcts.getPolicy(deepcopy(currState))
-            action = self.sampleAction(policy)
-            
->>>>>>> fe170cc3d45ff7dc266c9dacb5186c0bf5ace4ed
             policies.append(policy)
         
             action = self.sampleAction(policy)
@@ -86,13 +76,9 @@ class SelfPlay():
             nextState = getNextState(deepcopy(currState), obs_t)
             # print('#################HERE##############################')
             # print(currState, nextState)
-<<<<<<< HEAD
             self.currPlayer = 3 - self.currPlayer
             # print(self.currPlayer)
             # print(nextState[16, :, :])
-=======
-            self.currPlayer = not self.currPlayer
->>>>>>> fe170cc3d45ff7dc266c9dacb5186c0bf5ace4ed
             assert(self.currPlayer == nextState[16, 0, 0])
             currState = nextState
             i += 1

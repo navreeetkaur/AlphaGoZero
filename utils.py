@@ -6,7 +6,6 @@ from copy import copy, deepcopy
 
 
 
-
 # util_simulator = GoEnv()
 # goenv = GoEnv(player_color=PLAYER_COLOR, observation_type='image3c', illegal_move_mode="raise", board_size=BOARD_SIZE, komi=KOMI_VALUE)
 
