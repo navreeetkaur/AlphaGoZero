@@ -5,7 +5,7 @@ from dotdict import *
 from torch.optim import SGD
 from torchsummary import summary
 from config import *
-
+from tensorboardX import SummaryWriter
 
 def conv3x3(num_in, num_out, stride=1):
     return nn.Conv2d(in_channels=num_in, out_channels=num_out, stride=stride, kernel_size=3, padding=1, bias=False)
@@ -33,13 +33,13 @@ class ResBlock(nn.Module):
         out = self.bn1(self.conv1(x))
         out = self.relu(out)
         out = self.bn2(self.conv2(out))
-        print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+        # print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
         if self.downsample:
             residual = self.downsample_conv(residual)
-        print(residual.shape)
+        # print(residual.shape)
         out+=residual
         out = self.relu(out)
-        print(out.shape)
+        # print(out.shape)
         return out
 
 
@@ -69,24 +69,24 @@ class AlphaGoNNet(nn.Module):
     
     def forward(self, state):
         # first conv block
-        print("input:", state.shape)
+        # print("input:", state.shape)
         out = self.bn(self.conv(state))
-        print("conv1, bn1: ",out.shape)
+        # print("conv1, bn1: ",out.shape)
         out = self.relu(out)
-        print(out.shape)
-        print("^^^^^^^^^^^^^^^")
+        # print(out.shape)
+        # print("^^^^^^^^^^^^^^^")
         # residual tower
         # print(self.res_layers)
         # print(out)
         out = self.res_layers(out)
-        print(out.shape)
+        # print(out.shape)
         # policy network
         p_out = self.p_bn(self.p_conv(out))
-        print(p_out.shape)
+        # print(p_out.shape)
 
         p_out = self.relu(p_out)
         p_out = p_out.view(p_out.size(0), -1)
-        print(p_out.shape)
+        # print(p_out.shape)
         # print(self.p_fc)
         p_out = self.p_fc(p_out)
         p_out = self.p_log_softmax(p_out)
@@ -98,7 +98,7 @@ class AlphaGoNNet(nn.Module):
         v_out = self.relu(v_out)
         v_out = self.v_fc2(v_out)
         v_out = self.tanh(v_out)
-        print("p_out, v_out: ", p_out.shape, v_out.shape)
+        # print("p_out, v_out: ", p_out.shape, v_out.shape)
         return p_out,v_out
 
 args = dotdict({
@@ -109,7 +109,7 @@ args = dotdict({
     'num_layers':BOARD_SIZE,
     'num_channels': 256,
     'epochs': 10,
-    'batch_size': 5,
+    'batch_size': 32,
     'mini_batch': 2048,
     'lr': 0.001,
     'dropout': 0.3,
@@ -149,6 +149,7 @@ class PolicyValueNet():
         self.args = args
         self.nn = AlphaGoNNet(res_layers=args.board_size, board_size=args.board_size, action_size=args.action_size, num_features=args.num_features, num_channels=args.num_channels, num_layers=args.num_layers)
         self.nn = self.nn.double()
+        self.writer = SummaryWriter()
         print("- - - PolicyValueNet - - - ")
         if args.cuda:
             self.nn.cuda()
@@ -178,17 +179,18 @@ class PolicyValueNet():
         print(len(episode[0]), len(episode[1]), len(episode[2]))
         print(episode[0][0].shape, episode[1][0].shape, episode[2][0])
         print("* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *")
+        # print(batches)
         for epoch in range(self.args.epochs):
+            batches = self.divide_chunks(episode)
+            print("EPOCH : ", epoch)
             self.nn.train()
             ###########
             # take a batch of data
             # extract state, action, value pair as tensors from mcts episodes
             # pass to nn
             ###########
-            batches = self.divide_chunks(episode)
-            print(batches)
             for states, p_mcts, v_mcts in batches:
-                print(states.shape, p_mcts.shape, v_mcts.shape)
+                # print(states.shape, p_mcts.shape, v_mcts.shape)
                 if self.args.cuda:
                     states = states.cuda()
                     p_mcts = policies.cuda()
@@ -197,19 +199,22 @@ class PolicyValueNet():
                 # print(summary(self.nn,states.shape))
                 # print("------------------------------------------------------------------------------------")
                 self.optimizer.zero_grad()
-                print("get output of nn")
+                # print("get output of nn")
                 log_ps, vs = self.nn(states)
                 loss = self.alpha_loss(log_ps, vs, p_mcts, v_mcts)
+                print("Loss : ", loss)
                 loss.backward()
                 self.optimizer.step()
+            self.writer.add_scalar('Loss/train', loss, epoch)
+        self.writer.close()
     
     def predict(self, state):
         state = torch.from_numpy(state).float().to(self.device)
         state = state.unsqueeze(0)
         self.nn.eval()
         log_ps, vs = self.nn(state)
-        print(log_ps.shape)
-        print(vs.shape)
+        # print(log_ps.shape)
+        # print(vs.shape)
         return np.exp(log_ps.squeeze(0).cpu().detach().numpy()), vs.squeeze(0).cpu().detach().numpy()
 
     def save_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar'):
