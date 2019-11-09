@@ -15,7 +15,7 @@ class SelfPlay():
 
     def __init__(self):
         print(PLAYER_COLOR)
-        self.simulator = GoEnv(player_color=PLAYER_COLOR, observation_type='image3c', illegal_move_mode="raise", board_size=BOARD_SIZE, komi=KOMI_VALUE)
+        # self.simulator = GoEnv(player_color=PLAYER_COLOR, observation_type='image3c', illegal_move_mode="raise", board_size=BOARD_SIZE, komi=KOMI_VALUE)
         self.network = PolicyValueNet(nnargs)
 
     def sampleAction(self, policy):
@@ -27,6 +27,7 @@ class SelfPlay():
 
 
     def runEpisode(self):
+        self.simulator = GoEnv(player_color=PLAYER_COLOR, observation_type='image3c', illegal_move_mode="raise", board_size=BOARD_SIZE, komi=KOMI_VALUE)
         self.simulator.reset()
         # print(self.simulator.state.color)
         # print("Ff~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
@@ -97,5 +98,7 @@ for ep_num in range(NUM_EPISODES):
     print('Episode Count: {}'.format(ep_num))
     states, policies, rewards = selfP.runEpisode()
     all_examples.append((states, policies, rewards))
-    from IPython import embed; embed()
+    # from IPython import embed; embed()
     selfP.network.train((np.array(states), np.array(policies), np.array(rewards)))
+    selfP.network.save_checkpoint()
+    # selfP.network.load_checkpoint()

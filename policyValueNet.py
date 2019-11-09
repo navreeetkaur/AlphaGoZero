@@ -6,6 +6,8 @@ from torch.optim import SGD
 from torchsummary import summary
 from config import *
 from tensorboardX import SummaryWriter
+import os
+from logger import Logger
 
 def conv3x3(num_in, num_out, stride=1):
     return nn.Conv2d(in_channels=num_in, out_channels=num_out, stride=stride, kernel_size=3, padding=1, bias=False)
@@ -106,9 +108,9 @@ args = dotdict({
     'board_size': BOARD_SIZE,
     'action_size':NUM_ACTIONS,
     'num_features':NUM_FEATURES,
-    'num_layers':BOARD_SIZE,
+    'num_layers':NUM_LAYERS,
     'num_channels': 256,
-    'epochs': 10,
+    'epochs': NUM_EPOCHS,
     'batch_size': 32,
     'mini_batch': 2048,
     'lr': 0.001,
@@ -141,6 +143,8 @@ class AlphaLoss(nn.Module):
     def forward(self, log_ps, vs, target_ps, target_vs):
         value_loss = torch.mean(torch.pow(vs - target_vs, 2))
         policy_loss = -torch.mean(torch.sum(target_ps * log_ps, 1))
+        self.v_loss = value_loss
+        self.p_loss = policy_loss
         return value_loss + policy_loss
 
 
@@ -149,7 +153,8 @@ class PolicyValueNet():
         self.args = args
         self.nn = AlphaGoNNet(res_layers=args.board_size, board_size=args.board_size, action_size=args.action_size, num_features=args.num_features, num_channels=args.num_channels, num_layers=args.num_layers)
         self.nn = self.nn.double()
-        self.writer = SummaryWriter()
+        self.writer = Logger('./logs')
+        self.step = 0
         print("- - - PolicyValueNet - - - ")
         if args.cuda:
             self.nn.cuda()
@@ -182,6 +187,7 @@ class PolicyValueNet():
         # print(batches)
         for epoch in range(self.args.epochs):
             batches = self.divide_chunks(episode)
+            total_loss=0
             print("EPOCH : ", epoch)
             self.nn.train()
             ###########
@@ -202,14 +208,20 @@ class PolicyValueNet():
                 # print("get output of nn")
                 log_ps, vs = self.nn(states)
                 loss = self.alpha_loss(log_ps, vs, p_mcts, v_mcts)
+                v_loss, p_loss = self.alpha_loss.v_loss, self.alpha_loss.p_loss
+                total_loss+=loss
                 print("Loss : ", loss)
                 loss.backward()
                 self.optimizer.step()
-            self.writer.add_scalar('Loss/train', loss, epoch)
-        self.writer.close()
+            info = {'total_loss': 1.0*total_loss/(len(episode[0])),
+                     'value_loss': v_loss, 
+                     'policy_loss': p_loss}
+            self.step += 1
+            for tag, value in info.items():
+                self.writer.scalar_summary(tag, value, self.step + 1)
     
     def predict(self, state):
-        state = torch.from_numpy(state).float().to(self.device)
+        state = torch.from_numpy(state).double().to(self.device)
         state = state.unsqueeze(0)
         self.nn.eval()
         log_ps, vs = self.nn(state)
@@ -218,10 +230,11 @@ class PolicyValueNet():
         return np.exp(log_ps.squeeze(0).cpu().detach().numpy()), vs.squeeze(0).cpu().detach().numpy()
 
     def save_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar'):
-        filepath = os.path.join(folder, filename)
+        filepath = os.path.join(folder, str(self.step) + '-' + filename)
         if not os.path.exists(folder):
             os.mkdir(folder)
-        torch.save({ 'state_dict' : self.nn.state_dict(), }, filepath)
+        if(self.step % 20 == 0):
+            torch.save({ 'state_dict' : self.nn.state_dict(), }, filepath)
     
     def load_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar'):
         filepath = os.path.join(folder, filename)
