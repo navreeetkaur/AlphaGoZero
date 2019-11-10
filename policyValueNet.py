@@ -1,13 +1,29 @@
 import numpy as np
 import torch
 import torch.nn as nn
+
 from dotdict import *
 from torch.optim import SGD
 from torchsummary import summary
 from config import *
-from tensorboardX import SummaryWriter
 import os
 from logger import Logger
+import time
+from torch.utils.data import Dataset, DataLoader
+
+
+class RLDataset(Dataset):
+    """Face Landmarks dataset."""
+
+    def __init__(self, episode):
+        self.episode = episode
+
+    def __len__(self):
+        return len(self.episode)
+
+    def __getitem__(self, idx):
+
+        return (self.episode[idx])
 
 def conv3x3(num_in, num_out, stride=1):
     return nn.Conv2d(in_channels=num_in, out_channels=num_out, stride=stride, kernel_size=3, padding=1, bias=False)
@@ -111,7 +127,7 @@ args = dotdict({
     'num_layers':NUM_LAYERS,
     'num_channels': 256,
     'epochs': NUM_EPOCHS,
-    'batch_size': 32,
+    'batch_size': BATCH_SIZE,
     'mini_batch': 2048,
     'lr': 0.001,
     'dropout': 0.3,
@@ -154,7 +170,8 @@ class PolicyValueNet():
         self.nn = AlphaGoNNet(res_layers=args.board_size, board_size=args.board_size, action_size=args.action_size, num_features=args.num_features, num_channels=args.num_channels, num_layers=args.num_layers)
         self.nn = self.nn.double()
         self.writer = Logger('./logs')
-        self.step = 0
+        self.step1 = 0
+        self.step2 = 0
         print("- - - PolicyValueNet - - - ")
         if args.cuda:
             self.nn.cuda()
@@ -175,19 +192,36 @@ class PolicyValueNet():
                     torch.from_numpy(np.array(episode[2][i:i + self.args.batch_size])))
 
 
+
     def train(self, episode):
         print("* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *")
         print("* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *")
         print("* * * * * * * * * * * * * * * Training the network * * * * * * * * * * * * * * *")
         print("* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *")
         print("* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *")
-        print(len(episode[0]), len(episode[1]), len(episode[2]))
-        print(episode[0][0].shape, episode[1][0].shape, episode[2][0])
+        # print(len(episode[0]), len(episode[1]), len(episode[2]))
+        # print(episode[0][0].shape, episode[1][0].shape, episode[2][0])
         print("* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *")
         # print(batches)
+        # from IPython import embed; embed()
+
+        dataset = RLDataset(episode)
+        dataloader = DataLoader(dataset, batch_size=args.batch_size,
+                    shuffle=True, num_workers=4)
+        batches = []
+        for i_batch, (s, p, v) in enumerate(dataloader):
+            batches.append((s.to(self.device), p.to(self.device), v.to(self.device)))
+            # from IPython import embed; embed()
+
+            # print(sample_batched.shape)
+
         for epoch in range(self.args.epochs):
-            batches = self.divide_chunks(episode)
+
+                        
+            # batches = self.divide_chunks(episode)
             total_loss=0
+            total_vloss = 0
+            total_ploss = 0
             print("EPOCH : ", epoch)
             self.nn.train()
             ###########
@@ -197,43 +231,53 @@ class PolicyValueNet():
             ###########
             for states, p_mcts, v_mcts in batches:
                 # print(states.shape, p_mcts.shape, v_mcts.shape)
-                if self.args.cuda:
-                    states = states.cuda()
-                    p_mcts = policies.cuda()
-                    v_mcts = rewards.cuda()
+                # if self.args.cuda:
+                #     states = states.cuda()
+                #     p_mcts = policies.cuda()
+                #     v_mcts = rewards.cuda()
                 # print("------------------------------------------------------------------------------------")
                 # print(summary(self.nn,states.shape))
                 # print("------------------------------------------------------------------------------------")
                 self.optimizer.zero_grad()
                 # print("get output of nn")
+                start_t = time.time()
                 log_ps, vs = self.nn(states)
                 loss = self.alpha_loss(log_ps, vs, p_mcts, v_mcts)
                 v_loss, p_loss = self.alpha_loss.v_loss, self.alpha_loss.p_loss
-                total_loss+=loss
+                total_loss += loss
+                total_vloss += v_loss
+                total_ploss += p_loss
                 print("Loss : ", loss)
                 loss.backward()
                 self.optimizer.step()
-            info = {'total_loss': 1.0*total_loss/(len(episode[0])),
-                     'value_loss': v_loss, 
-                     'policy_loss': p_loss}
-            self.step += 1
+                start_t = time.time()
+                info = {'value_loss': v_loss, 
+                        'policy_loss': p_loss}
+                self.step1 += 1
+                for tag, value in info.items():
+                    self.writer.scalar_summary(tag, value, self.step1 + 1)
+            info = {'total_loss': 1.0*total_loss/(len(episode)), 
+                    'total vloss': 1.0*total_vloss/(len(episode)),
+                    'total ploss': 1.0*total_ploss/(len(episode))}
+            self.step2 += 1
             for tag, value in info.items():
-                self.writer.scalar_summary(tag, value, self.step + 1)
+                self.writer.scalar_summary(tag, value, self.step2 + 1)
     
     def predict(self, state):
         state = torch.from_numpy(state).double().to(self.device)
         state = state.unsqueeze(0)
-        self.nn.eval()
-        log_ps, vs = self.nn(state)
+        self.nn = self.nn.eval()
+        with torch.no_grad():
+            log_ps, vs = self.nn(state)
         # print(log_ps.shape)
         # print(vs.shape)
         return np.exp(log_ps.squeeze(0).cpu().detach().numpy()), vs.squeeze(0).cpu().detach().numpy()
 
     def save_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar'):
-        filepath = os.path.join(folder, str(self.step) + '-' + filename)
+        filepath = os.path.join(folder, str(self.step2) + '-' + filename)
         if not os.path.exists(folder):
             os.mkdir(folder)
-        if(self.step % 20 == 0):
+        if(self.step2 % 10 == 0):
             torch.save({ 'state_dict' : self.nn.state_dict(), }, filepath)
     
     def load_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar'):

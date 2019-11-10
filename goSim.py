@@ -12,6 +12,7 @@ from gym.utils import seeding
 from six import StringIO
 import sys
 import six
+from copy import copy
 
 
 # The coordinate representation of Pachi (and pachi_py) is defined on a board
@@ -60,16 +61,10 @@ class GoState(object):
         '''
         assert color in [pachi_py.BLACK, pachi_py.WHITE], 'Invalid player color'
         self.board, self.color = board, color
-        # print(self.board.encode().shape)
-        # print("------------$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
-
-        # print(self.board.__repr__().decode())
-        # print("----------------------------------")
 
     def act(self, action):
         '''
         Executes an action for the current player
-
         Returns:
             a new GoState with the new board and the player switched
         '''
@@ -79,9 +74,6 @@ class GoState(object):
 
     def __repr__(self):
         return 'To play: {}\n{}'.format(six.u(pachi_py.color_to_str(self.color)), self.board.__repr__().decode())
-
-    def __boardString__(self):
-        return self.board.__repr__().decode()
 
 
 ### Adversary policies ###
@@ -120,6 +112,7 @@ def _play(black_policy_fn, white_policy_fn, board_size=19):
 
     prev_state, prev_action = None, None
     curr_state = GoState(pachi_py.CreateBoard(board_size), BLACK)
+
     while not curr_state.board.is_terminal:
         a = (black_policy_fn if curr_state.color == BLACK else white_policy_fn)(curr_state, prev_state, prev_action)
         next_state = curr_state.act(a)
@@ -202,13 +195,9 @@ class GoEnv(gym.Env):
         # self._reset_opponent(self.state.board)
 
         # Let the opponent play if it's not the agent's turn
-
         opponent_resigned = False
-        # print(self.state.color)
-        # print(self.player_color)
-        
         if self.state.color != self.player_color:
-            self.state, opponent_resigned, _ = self.exec_opponent_play(self.state, None, None)
+            self.state, opponent_resigned, _ = self._exec_opponent_play(self.state, None, None)
 
         # We should be back to the agent color
         assert self.state.color == self.player_color
@@ -241,7 +230,7 @@ class GoEnv(gym.Env):
         return self.state.board.encode(), _pass_action(self.board_size), reward, True, {'state': self.state}, current_score
 
     # Game terminates
-    # return obs_t, action, r_t, done, info, cur_score
+    # return obs_t, r_t, done, info, cur_score
     def step(self, action):
         assert self.state.color == self.player_color
 
@@ -287,7 +276,7 @@ class GoEnv(gym.Env):
 
         # # Opponent play
         # if not self.state.board.is_terminal:
-        #     self.state, opponent_resigned, both_passed = self.exec_opponent_play(self.state, prev_state, action)
+        #     self.state, opponent_resigned, both_passed = self._exec_opponent_play(self.state, prev_state, action)
         #
         #     if both_passed:
         #         self.last_player_passed = True
@@ -322,7 +311,7 @@ class GoEnv(gym.Env):
         return self.state.board.encode(), action, reward, True, {'state': self.state}, current_score
 
     # Given an observation checks if an action is valid or not
-    def is_legal_action(self, obs, action, cur_player_color):
+    def is_legal_action_old(self, obs, action, cur_player_color):
         # If pass or resign
         if action == _pass_action(self.board_size) or action == _resign_action(self.board_size):
             return True
@@ -346,8 +335,19 @@ class GoEnv(gym.Env):
             return True
         return False
 
+    # Takes in self.env.state and action to take, player color is assumed to be correct
+    def is_legal_action(self, action):
+        temp_state = copy(self.state)
+        
+        try:
+            temp_state.act(action)
+        except pachi_py.IllegalMove:
+            # print("PAchi's illegal move")
+            return False
+        return True
 
-    def exec_opponent_play(self, curr_state, prev_state, prev_action):
+
+    def _exec_opponent_play(self, curr_state, prev_state, prev_action):
         assert curr_state.color != self.player_color
         opponent_action = self.opponent_policy(curr_state, prev_state, prev_action)
 

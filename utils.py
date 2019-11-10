@@ -10,7 +10,7 @@ from copy import copy, deepcopy
 # goenv = GoEnv(player_color=PLAYER_COLOR, observation_type='image3c', illegal_move_mode="raise", board_size=BOARD_SIZE, komi=KOMI_VALUE)
 
 # Observation is of the form (3 x 13 x 13)
-# State is of the form (2* timesteps + 1) x 13 x 13
+# State is of the form (2* NUM_FEATURES + 1) x 13 x 13
 
 # def simulatorNextObservation(obs, action, player_colour):
 #     i, j = getCoordinatesFromActions(action)
@@ -23,27 +23,39 @@ from copy import copy, deepcopy
 #         return False
     
 
+def getStringState(state):
+    ans = ""
+    player_color = state[NUM_FEATURES - 1, 0, 0]
+    for i in range(0, NUM_FEATURES - 1, 2):
+        obs = stateToObs(state[i:i + 2, :, :], player_color)
+        # player_color = 3 - player_color
+        strObs = obsToString(obs)
+        ans += strObs
+        ans += "\n"
+    return ans
 
 
-def stateToObs(state):
+def stateToObs(state, player_colour=None):
     upperTwo = state[:2, :, :]
-    player_colour = state[16, 0, 0] # TODO: CHECK
+    if(player_colour is None):
+        player_colour = state[NUM_FEATURES - 1, 0, 0] # TODO: CHECK
     obs = np.zeros((3, upperTwo.shape[1], upperTwo.shape[2]))
     if(player_colour == Colour.WHITE.value):
         obs[0, :, :] = upperTwo[1, :, :]
         obs[1, :, :] = upperTwo[0, :, :]
     else:
+        # print("Colour Black")
         obs[0:2, :,  :] = upperTwo[0:2,:, : ]
     obs[2, :, :] = np.logical_not(np.logical_or(obs[0, :, :], obs[1, :, :]))
     return obs   
 
 # Observation is of the form (3 x 13 x 13)
-# Prev State is of the form (2* timesteps + 1) x 13 x 13
+# Prev State is of the form (2* NUM_FEATURES + 1) x 13 x 13
 def obsToState(obs, prev_state):
     new_state = np.zeros(prev_state.shape)
     new_state[0:2, :, :] = obs[0:2, :, :]
-    new_state[2:16, :, :] = prev_state[:14, :, :] 
-    new_state[16,  :, :] = prev_state[16,  :, :] # color is changed
+    new_state[2:NUM_FEATURES - 1, :, :] = prev_state[:NUM_FEATURES - 3, :, :] 
+    new_state[NUM_FEATURES - 1,  :, :] = prev_state[NUM_FEATURES - 1,  :, :] # color is changed
     return new_state
 
 def invertObs(obs):
@@ -78,11 +90,11 @@ def copySimulator(sim):
 
 def getNextState(state, obs):
     new_state = np.array(state)
-    for i in range(0, 13, 2):
+    for i in range(0, NUM_FEATURES - 4, 2):
         new_state[i+2, :, :] = state[i+1, :, :]
         new_state[i+3, :, :] = state[i, :, :]
-    new_state[16, :, :] = 3 - state[16, :, :]
-    player_color = new_state[16, 0, 0]
+    new_state[NUM_FEATURES - 1, :, :] = 3 - state[NUM_FEATURES - 1, :, :]
+    player_color = new_state[NUM_FEATURES - 1, 0, 0]
 
     if(player_color == Colour.BLACK.value):
         new_state[0:2, :, :] = obs[0:2, :, :]
@@ -114,7 +126,7 @@ def getCoordinatesFromActions(action):
     return action / BOARD_SIZE, action % BOARD_SIZE
 
 def getActionFromCoordinates(i, j):
-    return i * BOARD_SIZE + j
+    return int(i * BOARD_SIZE + j)
 
 def transformAction(action):
     i, j = getCoordinatesFromActions(action)
@@ -122,7 +134,7 @@ def transformAction(action):
     orig_j = j
     
     actions = []
-    for i in range(3):
+    for itr in range(3):
         j1 = i
         i1 = BOARD_SIZE - 1 - j
         i = i1
@@ -132,6 +144,16 @@ def transformAction(action):
     actions.append(getActionFromCoordinates(BOARD_SIZE - 1 - orig_i, orig_j))
     actions.append(getActionFromCoordinates(orig_i, BOARD_SIZE - 1 - orig_j))
     return actions
+
+def getAugmentedActions(policy):
+    newPolicies = np.zeros((5, NUM_ACTIONS))
+    policyMatrix = np.asarray(policy[:169]).reshape((BOARD_SIZE, BOARD_SIZE))
+    rotatedPolicies = getAllSymmetries(policyMatrix).reshape((5, BOARD_SIZE * BOARD_SIZE))
+    newPolicies[:, :169] = rotatedPolicies
+    newPolicies[:, 169] = policy[169]
+    newPolicies[:, 170] = policy[170]
+    return newPolicies
+
     
     
 '''
@@ -174,13 +196,26 @@ def getAllSymmetries(frame):
     flip2 = np.flip(frame, axis=1)
     return np.asarray([rot1, rot2, rot3, flip1, flip2]).reshape((5, BOARD_SIZE, BOARD_SIZE))
 
-# Returns (5 x 17 x 13 x 13)
+# Returns (5 x NUM_FEATURES x 13 x 13)
 def getSymmetries(state):
     allSymmetries = []
     for frame in state:
         symmetries = getAllSymmetries(frame)
         allSymmetries.append(symmetries)
-    allSymmetries = np.asarray(allSymmetries).reshape((NUM_CHANNELS, 5, BOARD_SIZE, BOARD_SIZE))
-    np.transpose(allSymmetries, (1, 0, 2, 3))
+    allSymmetries = np.asarray(allSymmetries).reshape((NUM_FEATURES, 5, BOARD_SIZE, BOARD_SIZE))
+    allSymmetries = np.transpose(allSymmetries, (1, 0, 2, 3))
     return allSymmetries
 
+def augmentExamples(states, policies, rewards):
+    finalStates = []
+    finalPolicies = []
+    finalRewards = []
+    for state, policy, reward in zip(states, policies, rewards):
+        augmentedStates = getSymmetries(state)
+        augmentedPolicies = getAugmentedActions(policy)
+        augmentedRewards = [reward] * 5
+        finalStates.extend(augmentedStates)
+        finalPolicies.extend(augmentedPolicies)
+        finalRewards.extend(augmentedRewards)
+    finalStates = np.asarray(finalStates).reshape((5 * len(states), NUM_FEATURES, BOARD_SIZE, BOARD_SIZE))
+    return finalStates, np.asarray(finalPolicies), finalRewards
