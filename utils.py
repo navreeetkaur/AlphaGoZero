@@ -146,9 +146,9 @@ def transformAction(action):
     return actions
 
 def getAugmentedActions(policy):
-    newPolicies = np.zeros((5, NUM_ACTIONS))
+    newPolicies = np.zeros((6, NUM_ACTIONS))
     policyMatrix = np.asarray(policy[:169]).reshape((BOARD_SIZE, BOARD_SIZE))
-    rotatedPolicies = getAllSymmetries(policyMatrix).reshape((5, BOARD_SIZE * BOARD_SIZE))
+    rotatedPolicies = getAllSymmetries(policyMatrix).reshape((6, BOARD_SIZE * BOARD_SIZE))
     newPolicies[:, :169] = rotatedPolicies
     newPolicies[:, 169] = policy[169]
     newPolicies[:, 170] = policy[170]
@@ -194,15 +194,15 @@ def getAllSymmetries(frame):
     rot3 = rotateMatrix(rot2)
     flip1 = np.flip(frame, axis=0)
     flip2 = np.flip(frame, axis=1)
-    return np.asarray([rot1, rot2, rot3, flip1, flip2]).reshape((5, BOARD_SIZE, BOARD_SIZE))
+    return np.asarray([frame, rot1, rot2, rot3, flip1, flip2]).reshape((6, BOARD_SIZE, BOARD_SIZE))
 
-# Returns (5 x NUM_FEATURES x 13 x 13)
+# Returns (6 x NUM_FEATURES x 13 x 13)
 def getSymmetries(state):
     allSymmetries = []
     for frame in state:
         symmetries = getAllSymmetries(frame)
         allSymmetries.append(symmetries)
-    allSymmetries = np.asarray(allSymmetries).reshape((NUM_FEATURES, 5, BOARD_SIZE, BOARD_SIZE))
+    allSymmetries = np.asarray(allSymmetries).reshape((NUM_FEATURES, 6, BOARD_SIZE, BOARD_SIZE))
     allSymmetries = np.transpose(allSymmetries, (1, 0, 2, 3))
     return allSymmetries
 
@@ -213,9 +213,9 @@ def augmentExamples(states, policies, rewards):
     for state, policy, reward in zip(states, policies, rewards):
         augmentedStates = getSymmetries(state)
         augmentedPolicies = getAugmentedActions(policy)
-        augmentedRewards = [reward] * 5
+        augmentedRewards = [reward] * 6
         finalStates.extend(augmentedStates)
         finalPolicies.extend(augmentedPolicies)
         finalRewards.extend(augmentedRewards)
-    finalStates = np.asarray(finalStates).reshape((5 * len(states), NUM_FEATURES, BOARD_SIZE, BOARD_SIZE))
+    finalStates = np.asarray(finalStates).reshape((6 * len(states), NUM_FEATURES, BOARD_SIZE, BOARD_SIZE))
     return finalStates, np.asarray(finalPolicies), finalRewards

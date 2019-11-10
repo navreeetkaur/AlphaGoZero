@@ -273,15 +273,14 @@ class PolicyValueNet():
         # print(vs.shape)
         return np.exp(log_ps.squeeze(0).cpu().detach().numpy()), vs.squeeze(0).cpu().detach().numpy()
 
-    def save_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar'):
-        filepath = os.path.join(folder, str(self.step2) + '-' + filename)
+    def save_checkpoint(self, tag, folder='checkpoint', filename='checkpoint.pth.tar'):
+        filepath = os.path.join(folder, tag + '-' + filename)
         if not os.path.exists(folder):
             os.mkdir(folder)
-        if(self.step2 % 10 == 0):
-            torch.save({ 'state_dict' : self.nn.state_dict(), }, filepath)
+        torch.save({ 'state_dict' : self.nn.state_dict(), }, filepath)
     
-    def load_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar'):
-        filepath = os.path.join(folder, filename)
+    def load_checkpoint(self, tag, folder='checkpoint', filename='checkpoint.pth.tar'):
+        filepath = os.path.join(folder, tag + '-' + filename)
         if not os.path.exists(filepath):
             raise("No model in path {}".format(filepath))
         map_location = None if args.cuda else 'cpu'
