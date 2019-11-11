@@ -26,7 +26,7 @@ class SelfPlay():
         return action
 
 
-    def runEpisode(self):
+    def runEpisode(self, temp):
         self.simulator = GoEnv(player_color=PLAYER_COLOR, observation_type='image3c', illegal_move_mode="raise", board_size=BOARD_SIZE, komi=KOMI_VALUE)
         self.simulator.reset()
         # print(self.simulator.state.color)
@@ -52,7 +52,7 @@ class SelfPlay():
             players.append(self.currPlayer)
             # print(self.simulator.state.color, self.simulator.player_color)
             start_t = time.time()
-            policy = self.mcts.getPolicy(deepcopy(currState), prev_action=action)
+            policy = self.mcts.getPolicy(deepcopy(currState), prev_action=action, temp=temp)
             end_t = time.time()
             print('Time elapsed for MCTS policy with {} simulations = {}'.format(
                         NUM_SIMULATIONS,
@@ -126,7 +126,14 @@ selfP = SelfPlay()
 all_examples = []
 for ep_num in range(NUM_EPISODES):
     print('Episode Count: {}'.format(ep_num))
-    states, policies, rewards = selfP.runEpisode()
+    if(ep_num < 10):
+        temp = 1.0
+    else:
+        temp = 0.4
+    try:
+        states, policies, rewards = selfP.runEpisode(temp)
+    except:
+        print('Episode No. {} failed'.format(ep_num))
 
     # print(getStringState(states[8]))
     aug_states, aug_policies, aug_rewards = augmentExamples(states, policies, rewards)
