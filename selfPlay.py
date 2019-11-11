@@ -13,12 +13,13 @@ import time, random
 
 class SelfPlay():
 
-    def __init__(self, ep_num=None):
+    def __init__(self, checkpoint=None):
         # print(PLAYER_COLOR)
         # self.simulator = GoEnv(player_color=PLAYER_COLOR, observation_type='image3c', illegal_move_mode="raise", board_size=BOARD_SIZE, komi=KOMI_VALUE)
         self.network = PolicyValueNet(nnargs)
-        if ep_num is not None:
-            self.network.load_checkpoint(tag=str(ep_num))
+        if checkpoint is not None:
+            self.network.load_checkpoint(tag=str(checkpoint))
+            print('LOADED MODEL -------------- CHECKPOINT COUNT : {}'.format(checkpoint))
 
     def sampleAction(self, policy):
 
@@ -127,9 +128,10 @@ class SelfPlay():
         
         return states, policies, rewards         
 
-selfP = SelfPlay(ep_num=2) # Use the number to load the model from
+checkpoint_to_load = 2
+selfP = SelfPlay(checkpoint=checkpoint_to_load) # Use the number to load the model from
 all_examples = []
-for ep_num in range(NUM_EPISODES):
+for ep_num in range(checkpoint_to_load + 1, NUM_EPISODES):
     print('Episode Count: {}'.format(ep_num))
     if(ep_num < 10):
         temp = 1.0
