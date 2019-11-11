@@ -131,9 +131,11 @@ for ep_num in range(NUM_EPISODES):
     # print(getStringState(states[8]))
     aug_states, aug_policies, aug_rewards = augmentExamples(states, policies, rewards)
     training_set = list(zip(aug_states, aug_policies, aug_rewards))
-    random.shuffle(training_set)
+    # random.shuffle(training_set)
+    # selfP.network.load_checkpoint(tag="0")
+
     selfP.network.train(training_set)
     if(ep_num % CHECKPOINT_COUNTER == 0):
         selfP.network.save_checkpoint(tag=str(ep_num))
-        # selfP.network = PolicyValueNet(nnargs)
-        # selfP.network.load_checkpoint(tag=str(ep_num))
+        selfP.network = PolicyValueNet(nnargs)
+        selfP.network.load_checkpoint(tag=str(ep_num))
