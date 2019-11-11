@@ -13,10 +13,12 @@ import time, random
 
 class SelfPlay():
 
-    def __init__(self):
+    def __init__(self, ep_num=None):
         # print(PLAYER_COLOR)
         # self.simulator = GoEnv(player_color=PLAYER_COLOR, observation_type='image3c', illegal_move_mode="raise", board_size=BOARD_SIZE, komi=KOMI_VALUE)
         self.network = PolicyValueNet(nnargs)
+        if ep_num is not None:
+            self.network.load_checkpoint(tag=str(ep_num))
 
     def sampleAction(self, policy):
 
@@ -47,70 +49,74 @@ class SelfPlay():
         self.currPlayer = Colour.BLACK.value
         i = 0
         action = None
-        while(True):
-            states.append(currState)
-            players.append(self.currPlayer)
-            # print(self.simulator.state.color, self.simulator.player_color)
-            start_t = time.time()
-            policy = self.mcts.getPolicy(deepcopy(currState), prev_action=action, temp=temp)
-            end_t = time.time()
-            print('Time elapsed for MCTS policy with {} simulations = {}'.format(
-                        NUM_SIMULATIONS,
-                        end_t - start_t
-                    ))            
+        try:
+            while(True):
+                states.append(currState)
+                players.append(self.currPlayer)
+                # print(self.simulator.state.color, self.simulator.player_color)
+                start_t = time.time()
+                policy = self.mcts.getPolicy(deepcopy(currState), prev_action=action, temp=temp)
+                end_t = time.time()
+                print('Time elapsed for MCTS policy with {} simulations = {}'.format(
+                            NUM_SIMULATIONS,
+                            end_t - start_t
+                        ))            
 
-            # print("Time elapsed for MCTS policy with")
-            policies.append(policy)
-            
-            if(i > 0 and action == PASS_ACTION):
-                _, _, win_reward, _, _, _ = self.simulator.decide_winner()
+                # print("Time elapsed for MCTS policy with")
+                policies.append(policy)
+                
+                if(i > 0 and action == PASS_ACTION):
+                    _, _, win_reward, _, _, _ = self.simulator.decide_winner()
 
-                # print(win_reward)
-                # print(black_colour)
-                if(win_reward > 0):
-                    action = PASS_ACTION
+                    # print(win_reward)
+                    # print(black_colour)
+                    if(win_reward > 0):
+                        action = PASS_ACTION
+                    else:
+                        action = self.sampleAction(policy)
+
                 else:
                     action = self.sampleAction(policy)
 
-            else:
-                action = self.sampleAction(policy)
-
-            # print(self.simulator.state.color, self.simulator.player_color)
-            print("Action to take  = ", action)
-            obs_t, action, r_t, done, info, cur_score = self.simulator.step(action)
-            
-            self.simulator.render()
-            # print('################# NEW_STATE ##############################')
-            if(done):
-                # from IPython import embed; embed()
-
-                reward = r_t
-                curr_colour = self.currPlayer
-                break
-            # inverted_obs = invertObs(obs_t)
-            nextState = getNextState(deepcopy(currState), obs_t)
-            # print('#################HERE##############################')
-            # print(currState, nextState)
-            self.currPlayer = 3 - self.currPlayer
-            self.simulator.set_player_color(self.currPlayer)
-            self.mcts.updateSimulator(self.simulator)
-
-            # print(self.currPlayer)
-            # print(nextState[16, :, :])
-            assert(self.currPlayer == nextState[NUM_FEATURES - 1, 0, 0])
-            currState = nextState
-            i += 1
-            if(i == NUM_MOVES):
-                _, _, reward, _, _, board_score = self.simulator.decide_winner()
+                # print(self.simulator.state.color, self.simulator.player_color)
+                print("Action to take  = ", action)
+                obs_t, action, r_t, done, info, cur_score = self.simulator.step(action)
                 
-                curr_colour = self.simulator.player_color
-                print("CURRENT COLOR -----------------------", curr_colour)
-                print("REWARD -----------------------", reward)
-                print("FINAL SCORE ------------------", board_score)
-                break
+                self.simulator.render()
+                # print('################# NEW_STATE ##############################')
+                if(done):
+                    # from IPython import embed; embed()
 
-                
-            print("No. of turns = ", i)
+                    reward = r_t
+                    curr_colour = self.currPlayer
+                    break
+                # inverted_obs = invertObs(obs_t)
+                nextState = getNextState(deepcopy(currState), obs_t)
+                # print('#################HERE##############################')
+                # print(currState, nextState)
+                self.currPlayer = 3 - self.currPlayer
+                self.simulator.set_player_color(self.currPlayer)
+                self.mcts.updateSimulator(self.simulator)
+
+                # print(self.currPlayer)
+                # print(nextState[16, :, :])
+                assert(self.currPlayer == nextState[NUM_FEATURES - 1, 0, 0])
+                currState = nextState
+                i += 1
+                if(i == NUM_MOVES):
+                    _, _, reward, _, _, board_score = self.simulator.decide_winner()
+                    
+                    curr_colour = self.simulator.player_color
+                    print("CURRENT COLOR -----------------------", curr_colour)
+                    print("REWARD -----------------------", reward)
+                    print("FINAL SCORE ------------------", board_score)
+                    break
+
+                    
+                print("No. of turns = ", i)
+        except:
+            _, _, reward, _, _, board_score = self.simulator.decide_winner()                
+            curr_colour = self.simulator.player_color
             
         for plr in players:
             if(curr_colour == plr):
@@ -121,8 +127,7 @@ class SelfPlay():
         
         return states, policies, rewards         
 
-            
-selfP = SelfPlay()
+selfP = SelfPlay(ep_num=2) # Use the number to load the model from
 all_examples = []
 for ep_num in range(NUM_EPISODES):
     print('Episode Count: {}'.format(ep_num))
@@ -132,17 +137,15 @@ for ep_num in range(NUM_EPISODES):
         temp = 0.4
     try:
         states, policies, rewards = selfP.runEpisode(temp)
+        # print(getStringState(states[8]))
+        aug_states, aug_policies, aug_rewards = augmentExamples(states, policies, rewards)
+        training_set = list(zip(aug_states, aug_policies, aug_rewards))
+        # random.shuffle(training_set)
+        # selfP.network.load_checkpoint(tag="0")
+
+        selfP.network.train(training_set)
+        if(ep_num % CHECKPOINT_COUNTER == 0):
+            selfP.network.save_checkpoint(tag=str(ep_num))
     except:
         print('Episode No. {} failed'.format(ep_num))
-
-    # print(getStringState(states[8]))
-    aug_states, aug_policies, aug_rewards = augmentExamples(states, policies, rewards)
-    training_set = list(zip(aug_states, aug_policies, aug_rewards))
-    # random.shuffle(training_set)
-    # selfP.network.load_checkpoint(tag="0")
-
-    selfP.network.train(training_set)
-    if(ep_num % CHECKPOINT_COUNTER == 0):
-        selfP.network.save_checkpoint(tag=str(ep_num))
-        selfP.network = PolicyValueNet(nnargs)
-        selfP.network.load_checkpoint(tag=str(ep_num))
+        continue
