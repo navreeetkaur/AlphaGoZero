@@ -253,7 +253,7 @@ class GoEnv(gym.Env):
         pass_flag = False
         # Play
         try:
-            print(action)
+            # print(action)
             self.state = self.state.act(action)
             self.last_player_passed = True if action == _pass_action(self.board_size) else False
             current_score = self.state.board.official_score + self.komi
@@ -342,11 +342,12 @@ class GoEnv(gym.Env):
         return False
 
     # Takes in self.env.state and action to take, player color is assumed to be correct
-    def is_legal_action(self, state, action):
-        temp_state = copy(state)
+    def is_legal_action(self, action):
+        temp_state = copy(self.state)
         try:
             temp_state.act(action)
         except pachi_py.IllegalMove:
+            # print("PAchi's illegal move")
             return False
         return True
 
