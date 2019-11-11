@@ -43,8 +43,8 @@ class MCTS():
         player_color = self.simulator.player_color
         
         for i in range(self.num_simulations):
-            print("Current player to play = ", player_color)
-            print("Simulation no. = ", i)
+            # print("Current player to play = ", player_color)
+            # print("Simulation no. = ", i)
             
             # print('------------------NEW SIMULATION-------------------')
             # print(state[16 ,0, 0])
@@ -77,9 +77,10 @@ class MCTS():
         assert(self.currSimulator is not None)
         validActions = np.zeros(NUM_ACTIONS, dtype='int32')
         toPass = True
+        # print("Current simulator colour = ", self.currSimulator.player_color)
+
         for action in range(NUM_ACTIONS):
             # if(self.currSimulator is not None):
-            print("Current simulator colour = ", self.currSimulator.player_color)
             is_legal_action = self.currSimulator.is_legal_action(action)
             # else:
             #     is_legal_action = self.simulator.is_legal_action(action)
@@ -116,9 +117,9 @@ class MCTS():
         obs_t = None
         r_t = None
         assert (self.currSimulator.state.color == self.currSimulator.player_color), "State color: {}, Playe Color: {}".format(self.currSimulator.state.color, self.currSimulator.player_color)
-        if not self.currSimulator.is_legal_action(action):
-            self.currSimulator.render()
-            print(action)
+        # if not self.currSimulator.is_legal_action(action):
+            # self.currSimulator.render()
+            # print(action)
         assert(self.currSimulator.is_legal_action(action))
         obs_t, action, r_t, done, info, cur_score = self.currSimulator.step(action)
         self.currSimulator.set_player_color(3 - self.currSimulator.player_color)
@@ -164,10 +165,10 @@ class MCTS():
         # Convert it into String representation
         strState = obsToString(obs)
         player_color = self.currSimulator.player_color
-        print("Actual player = ", player_color)
-        print(strState)
+        # print("Actual player = ", player_color)
+        # print(strState)
         if (strState, player_color, pass_action) not in self.Rs:
-            print("Reward first time")
+            # print("Reward first time")
             self.Rs[(strState, player_color, pass_action)] = reward
         else:
             # Correct code for action = 169, 170
@@ -185,7 +186,7 @@ class MCTS():
             return -self.Rs[(strState, player_color, pass_action)]
         
         if (strState, player_color, pass_action) not in self.Psa:
-            print("State first time estimating pp")
+            # print("State first time estimating pp")
 
             start_t = time.time()
             ps, vs = self.nNet.predict(state)
@@ -195,7 +196,7 @@ class MCTS():
                     # ))            
             assert(player_color == self.currSimulator.player_color)
             valids = self.getValidMoves()
-            print(valids)
+            # print(valids)
             ps = ps * valids
             self.Psa[(strState, player_color, pass_action)] = ps
             assert(np.sum(ps) > 0)
@@ -211,15 +212,15 @@ class MCTS():
             return -vs
 
         assert((strState, player_color, pass_action) in self.valid_moves)
-        print("State discovered before")
+        # print("State discovered before")
 
         valids = self.valid_moves[(strState, player_color, pass_action)]
         cur_best = -float('inf')
         best_act = -1
 
         for a in range(NUM_ACTIONS):
-            if valids[a]:
-                # print(self.Psa[strState].shape)
+            if valids[a] and self.currSimulator.is_legal_action(a):
+               # print(self.Psa[strState].shape)
                 # print(self.Ns[strState].shape)
 
                 if ((strState, player_color, pass_action),a) in self.Qsa:
@@ -242,7 +243,7 @@ class MCTS():
         # print(player_colour)
         next_state = getNextState(state, next_obs) # Color is Black
 
-        print("Current player = ", player_color)
+        # print("Current player:{}, action taken:{}".format(player_color, a))
         v = self.search(next_state, -next_reward, (a == PASS_ACTION))
 
         if ((strState, player_color, pass_action),a) in self.Qsa:
