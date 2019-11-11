@@ -65,6 +65,7 @@ class GoState(object):
     def act(self, action):
         '''
         Executes an action for the current player
+
         Returns:
             a new GoState with the new board and the player switched
         '''
@@ -249,9 +250,10 @@ class GoEnv(gym.Env):
             self.done = True
             return self.state.board.encode(), action, -1., True, {'state': self.state}, current_score
 
+        pass_flag = False
         # Play
         try:
-            # print(action)
+            print(action)
             self.state = self.state.act(action)
             self.last_player_passed = True if action == _pass_action(self.board_size) else False
             current_score = self.state.board.official_score + self.komi
@@ -265,6 +267,7 @@ class GoEnv(gym.Env):
                     self.last_player_passed = True
                 self.state = self.state.act(_pass_action(self.board_size))
                 current_score = self.state.board.official_score + self.komi
+                pass_flag = True
                 print("illegal_move, considered as Pass")
                 # six.reraise(*sys.exc_info())
             elif self.illegal_move_mode == 'lose':
@@ -294,7 +297,10 @@ class GoEnv(gym.Env):
         # Reward: if nonterminal, then the reward is 0
         if not self.state.board.is_terminal:
             self.done = False
-            return self.state.board.encode(), action, 0., False, {'state': self.state}, current_score
+            if pass_flag:
+                return self.state.board.encode(), _pass_action(self.board_size), 0., False, {'state': self.state}, current_score
+            else:
+                return self.state.board.encode(), action, 0., False, {'state': self.state}, current_score
 
         # We're in a terminal state. Reward is 1 if won, -1 if lost
         assert self.state.board.is_terminal
@@ -336,13 +342,11 @@ class GoEnv(gym.Env):
         return False
 
     # Takes in self.env.state and action to take, player color is assumed to be correct
-    def is_legal_action(self, action):
-        temp_state = copy(self.state)
-        
+    def is_legal_action(self, state, action):
+        temp_state = copy(state)
         try:
             temp_state.act(action)
         except pachi_py.IllegalMove:
-            # print("PAchi's illegal move")
             return False
         return True
 
