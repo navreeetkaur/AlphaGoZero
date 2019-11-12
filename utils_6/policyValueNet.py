@@ -65,8 +65,8 @@ class ResBlock(nn.Module):
 class AlphaGoNNet(nn.Module):
     def __init__(self, res_layers, board_size, action_size, num_features, num_layers, num_channels=256):
         super(AlphaGoNNet, self).__init__()
-        print("\nPARAMS")
-        print(res_layers, board_size, action_size, num_features, num_layers, num_channels, "\n")
+        # print("\nPARAMS")
+        # print(res_layers, board_size, action_size, num_features, num_layers, num_channels, "\n")
         # convolutional block
         self.conv = conv3x3(num_in=num_features, num_out=num_channels, stride=1)
         self.bn = nn.BatchNorm2d(num_channels)
@@ -173,7 +173,7 @@ class PolicyValueNet():
         self.writer = Logger('./utils_6/logs')
         self.step1 = 0
         self.step2 = 0
-        print("- - - PolicyValueNet - - - ")
+        # print("- - - PolicyValueNet - - - ")
         if args.cuda:
             self.nn.cuda()
             self.device = torch.device("cuda:0") 
@@ -181,9 +181,9 @@ class PolicyValueNet():
             self.device = torch.device("cpu") 
         self.optimizer = SGD(self.nn.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.l2)
         self.alpha_loss = AlphaLoss()
-        print("------------------------------------------------------------------------------------")
+        # print("------------------------------------------------------------------------------------")
         # print(self.nn)
-        print("------------------------------------------------------------------------------------")
+        # print("------------------------------------------------------------------------------------")
         
 
     def divide_chunks(self,episode): 

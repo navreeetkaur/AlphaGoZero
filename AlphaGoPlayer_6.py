@@ -18,6 +18,7 @@ from time_handler import deadline, TimedOutExc
 
 class AlphaGoPlayer():
     def __init__(self, init_state, seed, player_color, board_size=13, timesteps=8):
+        # print("PLAYER COLOR = ", player_color)
         self.init_state = init_state
         self.seed = seed
         self.player_color = player_color
@@ -49,6 +50,8 @@ class AlphaGoPlayer():
     # Simulator passes observation as current state
     @deadline(5)
     def get_action(self, cur_obs, opponent_action):
+        start_t = time.time()
+        # print("OPPONENT ACTION = ", opponent_action)
         if(opponent_action != -1):
             self.simulator.set_player_color(3 - self.player_color)
             _, _, _, _, _, _ = self.simulator.step(opponent_action)
@@ -76,20 +79,25 @@ class AlphaGoPlayer():
         except TimedOutExc as e:
             print("took too long")
             action = goSim._pass_action(self.board_size)
+        _, _, win_reward, _, _, curr_score= self.simulator.decide_winner()
+        # self.simulator.render()
+        # print("WIN REWARD OUTER = ", win_reward)
+        # print("Current score OUTER = ", curr_score)
 
         if(opponent_action == PASS_ACTION):
             _, _, win_reward, _, _, curr_score= self.simulator.decide_winner()
-            print("WIN REWARD = ", win_reward)
-            print("Current score = ", curr_score)
+            # self.simulator.render()
+            # print("WIN REWARD = ", win_reward)
+            # print("Current score = ", curr_score)
             if(win_reward > 0):
+                # self.simulator = GoEnv(player_color='black', observation_type='image3c', illegal_move_mode="raise", board_size=13, komi=7.5)
+                # self.simulator.reset()
                 action = PASS_ACTION
-
+        print("ACTION CHOSEN = ", action)
         self.simulator.step(action)
+        end_t = time.time()
+        print("Total time taken for action = ", end_t - start_t)
         return action
 
-
-
-    def mcts(self, cur_state, model):
-        return policy
 
     

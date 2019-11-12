@@ -23,9 +23,11 @@ class MCTS():
         self.valid_moves = {}
         self.num_simulations = NUM_SIMULATIONS
         self.simulator = simulator
+        self.simulations_time = SIMULATIONS_TIME
         # print(simulator.player_color)
         # print(simulator.state.color)
         self.currSimulator = copySimulator(simulator)
+        self.policyTime = 0.0
 
     def updateSimulator(self, simulator):
         self.simulator =  copySimulator(simulator)
@@ -38,19 +40,30 @@ class MCTS():
     # run MCTS with player 1 (BLACK)
     # invert it when the player is WHITE
     def getPolicy(self, state, prev_action=None, temp=1):
+        start_t = time.time()
         # from IPython import embed; embed()
         # print("Inside MCTS colour ", state[16 ,0, 0])
         # if(state[16,0,0] == Colour.WHITE.value):
         #     state[16, :, :] = Colour.BLACK.value
         player_color = self.simulator.player_color
         
-        for i in range(self.num_simulations):
+        sims = 0
+        while(True):
             # print("Current player to play = ", player_color)
             # print("Simulation no. = ", i)
             
             # print('------------------NEW SIMULATION-------------------')
             # print(state[16 ,0, 0])
-            self.search(deepcopy(state), 0, prev_action == PASS_ACTION)
+            try:
+                self.search(deepcopy(state), 0, prev_action == PASS_ACTION)
+                sims += 1
+                if(time.time() - start_t > self.simulations_time):
+                    # print("total simulations done = ", sims)
+                    break
+            except:
+                break
+        
+
         curObs = stateToObs(state)
         strObs = obsToString(curObs)
         counts = np.zeros(NUM_ACTIONS)
@@ -64,6 +77,7 @@ class MCTS():
                     # print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
                     assert(self.simulator.is_legal_action(a))
 
+
         if(temp == 0):
             bestA = np.argmax(counts)
             probs = [0] * len(counts)
@@ -73,6 +87,11 @@ class MCTS():
         counts = [x ** (1./temp) for x in counts]
         probs = [x/float(sum(counts)) for x in counts]
         # print("Policy = ", probs)
+        end_t = time.time()
+        totalTime = end_t - start_t
+        # print("Policy time = ", self.policyTime)
+        # print("Total time = ", totalTime)
+        self.policyTime = 0.0
         return probs
 
     def getValidMoves(self):
@@ -193,6 +212,7 @@ class MCTS():
             start_t = time.time()
             ps, vs = self.nNet.predict(state)
             end_t = time.time()
+            self.policyTime += end_t - start_t
             # print('Time elapsed for prediction = {}'.format(
                         # end_t - start_t
                     # ))            
