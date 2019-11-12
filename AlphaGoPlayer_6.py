@@ -76,6 +76,14 @@ class AlphaGoPlayer():
         except TimedOutExc as e:
             print("took too long")
             action = goSim._pass_action(self.board_size)
+
+        if(opponent_action == PASS_ACTION):
+            _, _, win_reward, _, _, curr_score= self.simulator.decide_winner()
+            print("WIN REWARD = ", win_reward)
+            print("Current score = ", curr_score)
+            if(win_reward > 0):
+                action = PASS_ACTION
+
         self.simulator.step(action)
         return action
 
