@@ -70,6 +70,6 @@ class RunMatches():
             winner, final_score = match.run_match()
 
 
-t = Tournament([1,2], 4, 13, 7.5)
+t = Tournament([1,6], 4, 13, 7.5)
 
 t.run_tournament()
