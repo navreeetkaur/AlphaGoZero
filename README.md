@@ -136,7 +136,7 @@ The following table gives a detailed list of all the parameters used in the proj
 |batch size for training|BATCH_SIZE|128|
 |the checkpoint to be loaded for prediction|CHECKPOINT_COUNTER|1|
 
-#### Observations
+### Observations
 
 The following graphs show the variation of loss as one episode progresses and with increasing number of episodes. 
 It can be noticed that although the total value loss fluctuates and does not continuously decrease, the overall loss and total policy loss continuously decrease. The fluctuations in total value loss are not of big concern since the scalar value of loss itself is very small, of the order 10e-3. 
@@ -154,7 +154,7 @@ Below are shown some figures that show how policy and value loss decrease within
 
 **Decrease of Value Loss within an episode as the training progresses**
 
-#### Challenges faced
+### Challenges faced
 - Infinite Episode Length
 - Passing State to Functions (issues with copying)
 - Determining Legal Moves
@@ -166,7 +166,7 @@ Below are shown some figures that show how policy and value loss decrease within
   - To decrease the prediction time within boundary range of 5 seconds, we decreased the number of timesteps which are being fed to the network while ensuring a complex enough network with an adequate capacity to learn.
   
   
-####  Usage Instructions
+###  Usage Instructions
 
 Our source code consists of the following files inside the utils_6 folder :
 - policyValueNet.py : Architecture and training procedure for the neural network
